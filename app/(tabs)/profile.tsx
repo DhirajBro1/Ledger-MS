@@ -20,7 +20,7 @@ const DEVELOPER_EMAIL = 'panditdhiraj296@gmail.com';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { token, user, logout } = useAuth();
   const { theme, setTheme, colorScheme } = useTheme();
   const isDark = colorScheme === 'dark';
 
@@ -213,7 +213,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {user && (
+        {token && (
           <Pressable
             onPress={handleSignOut}
             style={({ pressed }) => [

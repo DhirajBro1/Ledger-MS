@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "Ledger-MS",
+    "name": "Ledger MS",
     "slug": "ledger-ms",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "ledgerms",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
@@ -17,6 +17,9 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundImage": "./assets/images/adaptive-icon.png",
         "monochromeImage": "./assets/images/adaptive-icon.png"
+      },
+      "gradleProperties": {
+        "newArchEnabled": "true"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
