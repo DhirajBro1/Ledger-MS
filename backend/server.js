@@ -76,18 +76,30 @@ const authenticateToken = (req, res, next) => {
 
 const transactionSchema = new mongoose.Schema(
   {
+    date: {
+      type: Date,
+      default: Date.now,
+    },
+    description: {
+      type: String,
+      default: "",
+    },
+    credit: {
+      type: Number,
+      default: 0,
+    },
+    debit: {
+      type: Number,
+      default: 0,
+    },
     amount: {
       type: Number,
-      required: true,
+      default: 0,
     },
     type: {
       type: String,
       enum: ["Credit", "Payment"],
-      required: true,
-    },
-    date: {
-      type: Date,
-      default: Date.now,
+      default: undefined,
     },
     note: {
       type: String,
@@ -96,6 +108,14 @@ const transactionSchema = new mongoose.Schema(
   },
   { _id: false }
 );
+
+const calculateTotalDue = (transactions = []) => {
+  return transactions.reduce((balance, tx) => {
+    const credit = Number(tx.credit) || (tx.type === 'Payment' ? Number(tx.amount) || 0 : 0);
+    const debit = Number(tx.debit) || (tx.type === 'Credit' ? Number(tx.amount) || 0 : 0);
+    return balance + debit - credit;
+  }, 0);
+};
 
 const customerSchema = new mongoose.Schema(
   {
@@ -117,7 +137,8 @@ const customerSchema = new mongoose.Schema(
     },
     phoneNumber: {
       type: String,
-      required: true,
+      required: false,
+      default: '',
       trim: true,
     },
     totalDue: {
@@ -137,18 +158,7 @@ customerSchema.index({ userId: 1, clientId: 1 }, { unique: true });
 
 // Pre-save hook to auto-calculate totalDue from transactions
 customerSchema.pre('save', function (next) {
-  const transactions = this.transactions || [];
-  const totalDue = transactions.reduce((balance, tx) => {
-    const amount = Number(tx.amount) || 0;
-    if (tx.type === 'Credit') {
-      return balance + amount;
-    } else if (tx.type === 'Payment') {
-      return balance - amount;
-    }
-    return balance;
-  }, 0);
-
-  this.totalDue = totalDue;
+  this.totalDue = calculateTotalDue(this.transactions || []);
   next();
 });
 
@@ -231,14 +241,26 @@ app.get("/health", (_req, res) => {
 
 app.post("/api/customers", authenticateToken, async (req, res) => {
   try {
-    const { clientId, name, phoneNumber, transactions = [] } = req.body;
+    const { clientId, name, phoneNumber = '', transactions = [] } = req.body;
     const userId = req.userId;
 
-    if (!clientId || !name || !phoneNumber) {
+    if (!clientId || !name) {
       return res.status(400).json({
-        message: "clientId, name, and phoneNumber are required",
+        message: "clientId and name are required",
       });
     }
+
+    const normalizedTransactions = transactions.map((tx) => ({
+      date: tx.date || new Date().toISOString(),
+      description: tx.description || tx.note || '',
+      credit: Number(tx.credit) || 0,
+      debit: Number(tx.debit) || 0,
+      amount: Number(tx.amount) || 0,
+      type: tx.type,
+      note: tx.note || '',
+    }));
+
+    const totalDue = calculateTotalDue(normalizedTransactions);
 
     const customer = await Customer.findOneAndUpdate(
       { userId, clientId },
@@ -246,8 +268,9 @@ app.post("/api/customers", authenticateToken, async (req, res) => {
         userId,
         clientId,
         name,
-        phoneNumber,
-        transactions,
+        phoneNumber: phoneNumber || '',
+        transactions: normalizedTransactions,
+        totalDue,
       },
       {
         new: true,

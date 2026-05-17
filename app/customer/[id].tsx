@@ -17,6 +17,7 @@ import {
   Customer,
   Transaction,
   getLocalCustomers,
+  normalizeTransactionRecord,
   updateLocalCustomer,
   syncLocalCustomersWithServer,
 } from '@/lib/ledger-store';
@@ -77,18 +78,18 @@ export default function CustomerDetailsScreen() {
     let runningBalance = 0;
 
     return sortedTransactions.map((transaction, index) => {
-      const legacyAmount = Number(transaction.amount) || 0;
-      const credit = Number(transaction.credit ?? 0) || (transaction.type === 'Payment' ? legacyAmount : 0);
-      const debit = Number(transaction.debit ?? 0) || (transaction.type === 'Credit' ? legacyAmount : 0);
+      const normalizedTransaction = normalizeTransactionRecord(transaction);
+      const credit = Number(normalizedTransaction.credit) || 0;
+      const debit = Number(normalizedTransaction.debit) || 0;
 
       runningBalance += debit - credit;
 
       return {
         sn: index + 1,
-        date: new Date(transaction.date),
+        date: new Date(normalizedTransaction.date),
         description:
-          transaction.description?.trim() ||
-          transaction.note?.trim() ||
+          normalizedTransaction.description?.trim() ||
+          normalizedTransaction.note?.trim() ||
           (debit > 0 ? 'Debit entry' : 'Credit entry'),
         credit,
         debit,
@@ -114,7 +115,7 @@ export default function CustomerDetailsScreen() {
     const parsedDebit = Number(debitAmount);
 
     if ((!parsedCredit || parsedCredit <= 0) && (!parsedDebit || parsedDebit <= 0)) {
-      alert('Enter a credit or debit amount');
+      alert('Enter amount received or amount due');
       return;
     }
 
@@ -177,7 +178,7 @@ export default function CustomerDetailsScreen() {
           <View style={styles.summaryRow}>
             <Text style={[styles.summaryLabel, { color: palette.textMuted }]}>Current Due</Text>
             <Text style={[styles.summaryValue, isCleared ? styles.green : styles.red]}>
-              {isCleared ? 'Cleared' : `₹${balance.toFixed(2)}`}
+              {isCleared ? 'Cleared' : `₨${balance.toFixed(2)}`}
             </Text>
           </View>
         </View>
@@ -224,7 +225,7 @@ export default function CustomerDetailsScreen() {
             <View style={[styles.totalRow, { borderTopColor: palette.border }]}>
               <Text style={[styles.totalLabel, { color: palette.textMuted }]}>Total balance</Text>
               <Text style={[styles.totalValue, isCleared ? styles.green : styles.red]}>
-                {isCleared ? 'Cleared' : `₹${balance.toFixed(2)}`}
+                {isCleared ? 'Cleared' : `₨${balance.toFixed(2)}`}
               </Text>
             </View>
           </View>

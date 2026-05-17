@@ -7,9 +7,8 @@ import {
   TextInput,
   View,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
-import { Link, useFocusEffect, useRouter } from 'expo-router';
+import { Link, useFocusEffect } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -22,8 +21,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useTheme } from '@/lib/theme-context';
 
 export default function HomeScreen() {
-  const router = useRouter();
-  const { token, user, logout } = useAuth();
+  const { token, user } = useAuth();
   const { colorScheme } = useTheme();
   const isDark = colorScheme === 'dark';
   
@@ -60,30 +58,19 @@ export default function HomeScreen() {
       await syncLocalCustomersWithServer(API_BASE_URL, token);
       await loadCustomers();
     } catch (error: any) {
-      console.log('Background sync failed:', error.message);
+      // Log detailed error information for debugging
+      const errorMsg = error?.message || 'Unknown error';
+      const errorType = error?.name || 'Error';
+      console.log(`Background sync failed [${errorType}]:`, errorMsg);
+      console.log('API URL:', API_BASE_URL);
+      console.log('Error details:', error);
+      
+      // Still load local customers even if sync fails
       await loadCustomers();
     } finally {
       setIsFetching(false);
     }
   }, [API_BASE_URL, loadCustomers, token]);
-
-  const handleLogout = useCallback(async () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await logout();
-            router.replace('/auth/login');
-          } catch (error) {
-            console.log('Logout error:', error);
-          }
-        },
-      },
-    ]);
-  }, [logout, router]);
 
   useFocusEffect(
     useCallback(() => {
@@ -111,6 +98,19 @@ export default function HomeScreen() {
     });
   }, [customers, query]);
 
+  const getCustomerInitials = (name: string) => {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) {
+      return 'C';
+    }
+
+    if (parts.length === 1) {
+      return parts[0].slice(0, 2).toUpperCase();
+    }
+
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  };
+
   return (
     <ThemedView style={[styles.screen, { backgroundColor: palette.screen }]}>
       <FlatList
@@ -124,17 +124,20 @@ export default function HomeScreen() {
                 <Text style={[styles.greeting, { color: palette.text }]}>Hello, {user?.name ?? user?.email}</Text>
                 <Text style={[styles.subtitle, { color: palette.textMuted }]}>Welcome back</Text>
               </View>
-              <Pressable onPress={handleLogout} style={styles.logoutButton}>
-                <Text style={styles.logoutText}>Sign Out</Text>
-              </Pressable>
             </View>
 
             <View style={[styles.headerCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
-              <Text style={[styles.headerLabel, { color: palette.textMuted }]}>Balance Due</Text>
-              <Text style={[styles.headerValue, { color: palette.text }]}>₹{totalBalanceDue.toFixed(2)}</Text>
-              <Text style={[styles.headerSubtext, { color: palette.textMuted }]}>
-                {customers.length} customer{customers.length === 1 ? '' : 's'} stored locally
-              </Text>
+              <View style={styles.headerTopRow}>
+                <View>
+                  <Text style={[styles.headerLabel, { color: palette.textMuted }]}>Ledger overview</Text>
+                  <Text style={[styles.headerValue, { color: palette.text }]}>₨{totalBalanceDue.toFixed(2)}</Text>
+                </View>
+                <View style={[styles.summaryChip, { backgroundColor: palette.cardSoft, borderColor: palette.border }]}> 
+                  <Text style={[styles.summaryChipLabel, { color: palette.textMuted }]}>Customers</Text>
+                  <Text style={[styles.summaryChipValue, { color: palette.text }]}>{customers.length}</Text>
+                </View>
+              </View>
+              <Text style={[styles.headerSubtext, { color: palette.textMuted }]}>Track dues, balances, and customer history from one place.</Text>
             </View>
 
             <View style={styles.searchWrap}>
@@ -148,7 +151,10 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.sectionRow}>
-              <ThemedText type="subtitle">Customers</ThemedText>
+              <View>
+                <Text style={[styles.sectionKicker, { color: palette.textMuted }]}>Customer list</Text>
+                <Text style={[styles.sectionTitle, { color: palette.text }]}>Customers</Text>
+              </View>
               <Pressable 
                 onPress={refreshCustomers} 
                 style={[styles.refreshButton, { backgroundColor: palette.cardSoft, borderColor: palette.border }, isFetching && styles.refreshButtonDisabled]}
@@ -179,9 +185,15 @@ export default function HomeScreen() {
             <Link href={`/customer/${item.clientId}`} asChild>
               <Pressable style={[styles.customerCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
                 <View style={styles.customerRow}>
+                  <View style={[styles.customerAvatar, { backgroundColor: palette.cardSoft, borderColor: palette.border }]}> 
+                    <Text style={[styles.customerAvatarText, { color: palette.text }]}>{getCustomerInitials(item.name)}</Text>
+                  </View>
                   <View style={styles.customerNameWrap}>
-                    <Text style={[styles.customerName, { color: palette.text }]}>{item.name}</Text>
-                    <Text style={[styles.customerPhone, { color: palette.textMuted }]}>{item.phoneNumber}</Text>
+                    <View style={[styles.customerLabelPill, { backgroundColor: palette.cardSoft, borderColor: palette.border }]}> 
+                      <Text style={[styles.customerLabelText, { color: palette.textMuted }]}>Customer</Text>
+                    </View>
+                    <Text style={[styles.customerName, { color: palette.text }]} numberOfLines={1}>{item.name}</Text>
+                    <Text style={[styles.customerPhone, { color: palette.textMuted }]} numberOfLines={1}>{item.phoneNumber || 'No phone number'}</Text>
                   </View>
 
                   <Text
@@ -189,7 +201,7 @@ export default function HomeScreen() {
                       styles.balanceAmount,
                       isCleared ? styles.balanceGreen : styles.balanceRed,
                     ]}>
-                    {isCleared ? 'Cleared' : `Due ₹${balance.toFixed(2)}`}
+                    {isCleared ? 'Cleared' : `Due ₨${balance.toFixed(2)}`}
                   </Text>
                 </View>
               </Pressable>
@@ -198,12 +210,12 @@ export default function HomeScreen() {
         }}
       />
 
-      <Link href="/customers" asChild>
+      {/* <Link href="/customers" asChild>
         <Pressable style={[styles.fab, { backgroundColor: palette.accent }]}>
           <Text style={styles.fabIcon}>+</Text>
           <Text style={styles.fabText}>Add New Customer</Text>
         </Pressable>
-      </Link>
+      </Link> */}
     </ThemedView>
   );
 }
@@ -238,6 +250,32 @@ const styles = StyleSheet.create({
   },
   headerSubtext: {
     marginTop: 6,
+    lineHeight: 20,
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  summaryChip: {
+    minWidth: 94,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'flex-start',
+  },
+  summaryChipLabel: {
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.9,
+    fontWeight: '700',
+  },
+  summaryChipValue: {
+    fontSize: 20,
+    fontWeight: '900',
+    marginTop: 4,
   },
   searchWrap: {
     marginTop: 4,
@@ -254,6 +292,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 8,
+  },
+  sectionKicker: {
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 1.4,
+    fontWeight: '700',
+    marginBottom: 3,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: -0.3,
   },
   refreshButton: {
     paddingHorizontal: 14,
@@ -304,19 +354,50 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
+  customerAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  customerAvatarText: {
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+  },
   customerNameWrap: {
     flex: 1,
+    gap: 4,
   },
-  customerName: {
-    fontSize: 17,
+  customerLabelPill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  customerLabelText: {
+    fontSize: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.9,
     fontWeight: '700',
   },
+  customerName: {
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: -0.2,
+  },
   customerPhone: {
-    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 16,
   },
   balanceAmount: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
+    textAlign: 'right',
+    maxWidth: 120,
   },
   balanceRed: {
     color: '#f87171',

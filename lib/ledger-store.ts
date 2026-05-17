@@ -142,30 +142,59 @@ export const markCustomerSynced = async (clientId: string) => {
   await clearPendingSyncCustomer(clientId);
 };
 
+export const normalizeTransactionRecord = (tx: Transaction) => {
+  const legacyAmount = Number(tx.amount) || 0;
+  const credit = Number(tx.credit) || (tx.type === 'Payment' ? legacyAmount : 0);
+  const debit = Number(tx.debit) || (tx.type === 'Credit' ? legacyAmount : 0);
+
+  return {
+    date: tx.date,
+    description: tx.description || tx.note || '',
+    credit,
+    debit,
+    amount: legacyAmount,
+    type: tx.type,
+    note: tx.note || '',
+  };
+};
+
 export const syncPendingCustomers = async (apiBaseUrl: string, token: string) => {
   const queue = await getPendingSyncCustomers();
   const synced: string[] = [];
 
+  if (queue.length === 0) {
+    return 0; // Nothing to sync
+  }
+
   for (const customer of queue) {
-    const response = await fetch(`${apiBaseUrl.replace(/\/$/, '')}/api/customers`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        clientId: customer.clientId,
-        name: customer.name,
-        phoneNumber: customer.phoneNumber,
-        transactions: customer.transactions,
-      }),
-    });
+    try {
+      const url = `${apiBaseUrl.replace(/\/$/, '')}/api/customers`;
+      const normalizedTransactions = customer.transactions.map(normalizeTransactionRecord);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          clientId: customer.clientId,
+          name: customer.name,
+          phoneNumber: customer.phoneNumber,
+          transactions: normalizedTransactions,
+        }),
+        timeout: 10000, // 10 second timeout
+      });
 
-    if (!response.ok) {
-      throw new Error(`Sync failed for ${customer.clientId}`);
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+      }
+
+      synced.push(customer.clientId);
+    } catch (error) {
+      // Log which customer failed to sync
+      console.error(`Failed to sync customer ${customer.clientId}:`, error);
+      throw error; // Re-throw to be caught by caller
     }
-
-    synced.push(customer.clientId);
   }
 
   for (const clientId of synced) {
@@ -176,29 +205,39 @@ export const syncPendingCustomers = async (apiBaseUrl: string, token: string) =>
 };
 
 export const fetchCustomersFromServer = async (apiBaseUrl: string, token: string): Promise<Customer[]> => {
-  const response = await fetch(`${apiBaseUrl.replace(/\/$/, '')}/api/customers`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  try {
+    const url = `${apiBaseUrl.replace(/\/$/, '')}/api/customers`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      timeout: 10000, // 10 second timeout
+    });
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch customers from server');
+    if (!response.ok) {
+      throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+    }
+
+    const customers = await response.json();
+    
+    // Add pendingSync: false to server customers
+    const customersWithSyncStatus = customers.map((customer: any) => ({
+      ...customer,
+      transactions: Array.isArray(customer.transactions)
+        ? customer.transactions.map(normalizeTransactionRecord)
+        : [],
+      pendingSync: false,
+    }));
+
+    // Replace local customers with server data
+    await replaceLocalCustomers(customersWithSyncStatus);
+    return customersWithSyncStatus;
+  } catch (error) {
+    console.error('Failed to fetch customers from server:', error);
+    throw error;
   }
-
-  const customers = await response.json();
-  
-  // Add pendingSync: false to server customers
-  const customersWithSyncStatus = customers.map((customer: any) => ({
-    ...customer,
-    pendingSync: false,
-  }));
-
-  // Replace local customers with server data
-  await replaceLocalCustomers(customersWithSyncStatus);
-  return customersWithSyncStatus;
 };
 
 export const syncLocalCustomersWithServer = async (apiBaseUrl: string, token: string) => {

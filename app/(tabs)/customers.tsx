@@ -40,6 +40,7 @@ export default function CustomersScreen() {
   };
 
   const [name, setName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [apiUrl] = useState(process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:5000');
   const [isSaving, setIsSaving] = useState(false);
@@ -62,7 +63,7 @@ export default function CustomersScreen() {
 
     const input: CustomerInput = {
       name,
-      phoneNumber: '',
+      phoneNumber: phoneNumber.trim(),
     };
 
     try {
@@ -77,6 +78,7 @@ export default function CustomersScreen() {
       }
 
       setName('');
+      setPhoneNumber('');
       await load();
     } finally {
       setIsSaving(false);
@@ -111,10 +113,10 @@ export default function CustomersScreen() {
               </View>
             </View>
 
-            <ThemedText type="title">Create a new ledger entry</ThemedText>
-            <Text style={[styles.heroDescription, { color: palette.textMuted }] }>
+            <Text style={[styles.heroTitle, { color: palette.text }]}>Create a new ledger entry</Text>
+            {/* <Text style={[styles.heroDescription, { color: palette.textMuted }] }>
               Save locally first, then sync to MongoDB automatically when the device is online.
-            </Text>
+            </Text> */}
 
             <View style={styles.statsRow}>
               <View style={[styles.statCard, { backgroundColor: palette.cardSoft, borderColor: palette.border }]}>
@@ -143,6 +145,14 @@ export default function CustomersScreen() {
                 onChangeText={setName}
                 style={[styles.input, { backgroundColor: palette.cardSoft, color: palette.text, borderColor: palette.border }]}
               />
+              <TextInput
+                placeholder="Phone number"
+                placeholderTextColor={isDark ? '#94a3b8' : '#64748b'}
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+                keyboardType="phone-pad"
+                style={[styles.input, { backgroundColor: palette.cardSoft, color: palette.text, borderColor: palette.border }]}
+              />
             </View>
 
             <Pressable
@@ -161,7 +171,7 @@ export default function CustomersScreen() {
                   <Text style={[styles.primaryButtonText, { color: palette.text }]}>
                     Save customer
                   </Text>
-                  <Text style={[styles.primaryButtonSubtext, { color: palette.textMuted }]}>
+                  <Text style={[styles.primaryButtonSubtext, { color: isDark ? 'rgba(255,255,255,0.82)' : palette.textMuted }]}> 
                     Register the customer now and add ledger rows later
                   </Text>
                 </>
@@ -170,7 +180,7 @@ export default function CustomersScreen() {
 
             {/* manual sync button removed; syncing happens silently in background */}
 
-            <Text style={[styles.helperText, { color: palette.textMuted }]}>The app stores this entry on the device immediately and syncs it to the signed-in account when online.</Text>
+            {/* <Text style={[styles.helperText, { color: palette.textMuted }]}>The app stores this entry on the device immediately and syncs it to the signed-in account when online.</Text> */}
           </View>
 
           <View style={styles.listHeaderRow}>
@@ -209,7 +219,7 @@ export default function CustomersScreen() {
                     <View style={[styles.metaPill, { backgroundColor: palette.cardSoft, borderColor: palette.border }]}>
                       <Text style={[styles.metaLabel, { color: palette.textMuted }]}>Balance</Text>
                       <Text style={[styles.metaValue, isCleared ? styles.balanceGreen : styles.balanceRed]}>
-                        {isCleared ? 'Cleared' : `₹${Number(customer.totalDue).toFixed(2)}`}
+                        {isCleared ? 'Cleared' : `₨${Number(customer.totalDue).toFixed(2)}`}
                       </Text>
                     </View>
                     <View style={[styles.metaPill, { backgroundColor: palette.cardSoft, borderColor: palette.border }]}>
@@ -282,6 +292,12 @@ const styles = StyleSheet.create({
   heroDescription: {
     marginTop: 8,
     lineHeight: 20,
+  },
+  heroTitle: {
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: '800',
+    letterSpacing: -0.6,
   },
   statsRow: {
     flexDirection: 'row',
@@ -412,6 +428,7 @@ const styles = StyleSheet.create({
   primaryButtonSubtext: {
     fontSize: 12,
     fontWeight: '600',
+    lineHeight: 16,
   },
   secondaryButton: {
     backgroundColor: '#0f172a',
