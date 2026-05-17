@@ -15,11 +15,13 @@ export const unstable_settings = {
 
 function RootLayoutContent() {
   const { colorScheme, isLoading: themeLoading } = useTheme();
-  const { token, isLoading: authLoading } = useAuth();
+  const { token, user, isLoading: authLoading } = useAuth();
   const screenBackground = colorScheme === 'dark' ? '#0f172a' : '#f3f6fc';
 
   const isLoading = authLoading || themeLoading;
-  const screens = !token ? [
+  const isAuthenticated = Boolean(token && user);
+
+  const screens = !isAuthenticated ? [
     <Stack.Screen key="auth" name="auth" options={{ headerShown: false }} />,
   ] : [
     <Stack.Screen key="tabs" name="(tabs)" options={{ headerShown: false }} />,
