@@ -9,10 +9,6 @@ import { useTheme, ThemeProvider as AppThemeProvider } from '@/lib/theme-context
 import { LanguageProvider } from '@/lib/language-context';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
-
 function RootLayoutContent() {
   const { colorScheme, isLoading: themeLoading } = useTheme();
   const { token, user, isLoading: authLoading } = useAuth();

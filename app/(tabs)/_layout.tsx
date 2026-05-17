@@ -1,14 +1,24 @@
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
 import { View } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { CustomersVector, HomeVector, ProfileVector } from '@/components/ui/vector-images';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/lib/auth-context';
 import { useTheme } from '@/lib/theme-context';
 
 export default function TabLayout() {
   const { colorScheme } = useTheme();
+  const { token, user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return null;
+  }
+
+  if (!token || !user) {
+    return <Redirect href="/auth/login" />;
+  }
 
   return (
     <Tabs
