@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "ledgerms",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true
     },
@@ -19,7 +19,8 @@
         "monochromeImage": "./assets/images/adaptive-icon.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.dhirajbro1.ledger"
     },
     "web": {
       "output": "static",
