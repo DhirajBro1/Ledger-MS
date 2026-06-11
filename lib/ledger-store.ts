@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type Transaction = {
   date: string;
@@ -7,7 +7,7 @@ export type Transaction = {
   debit: number;
   amount?: number;
   note?: string;
-  type?: 'Credit' | 'Payment';
+  type?: "Credit" | "Payment";
 };
 
 export type Customer = {
@@ -28,8 +28,8 @@ export type CustomerInput = {
   transactions?: Transaction[];
 };
 
-const CUSTOMERS_KEY = 'ledger.customers.v1';
-const SYNC_QUEUE_KEY = 'ledger.syncQueue.v1';
+const CUSTOMERS_KEY = "ledger.customers.v1";
+const SYNC_QUEUE_KEY = "ledger.syncQueue.v1";
 
 const readJson = async <T>(key: string, fallback: T): Promise<T> => {
   const value = await AsyncStorage.getItem(key);
@@ -57,7 +57,9 @@ export const getLocalCustomers = async (): Promise<Customer[]> => {
   return readJson<Customer[]>(CUSTOMERS_KEY, []);
 };
 
-export const saveLocalCustomer = async (input: CustomerInput): Promise<Customer> => {
+export const saveLocalCustomer = async (
+  input: CustomerInput,
+): Promise<Customer> => {
   const customers = await getLocalCustomers();
   const clientId = input.clientId ?? generateClientId();
   const now = new Date().toISOString();
@@ -72,7 +74,9 @@ export const saveLocalCustomer = async (input: CustomerInput): Promise<Customer>
     pendingSync: true,
   };
 
-  const existingIndex = customers.findIndex((customer) => customer.clientId === clientId);
+  const existingIndex = customers.findIndex(
+    (customer) => customer.clientId === clientId,
+  );
 
   if (existingIndex >= 0) {
     customers[existingIndex] = nextCustomer;
@@ -88,10 +92,12 @@ export const saveLocalCustomer = async (input: CustomerInput): Promise<Customer>
 
 export const updateLocalCustomer = async (
   clientId: string,
-  updates: Partial<Omit<Customer, 'clientId' | 'updatedAt' | 'pendingSync'>>
+  updates: Partial<Omit<Customer, "clientId" | "updatedAt" | "pendingSync">>,
 ): Promise<Customer | null> => {
   const customers = await getLocalCustomers();
-  const index = customers.findIndex((customer) => customer.clientId === clientId);
+  const index = customers.findIndex(
+    (customer) => customer.clientId === clientId,
+  );
 
   if (index < 0) {
     return null;
@@ -135,7 +141,9 @@ export const clearPendingSyncCustomer = async (clientId: string) => {
 export const markCustomerSynced = async (clientId: string) => {
   const customers = await getLocalCustomers();
   const nextCustomers = customers.map((customer) =>
-    customer.clientId === clientId ? { ...customer, pendingSync: false } : customer
+    customer.clientId === clientId
+      ? { ...customer, pendingSync: false }
+      : customer,
   );
 
   await writeJson(CUSTOMERS_KEY, nextCustomers);
@@ -144,21 +152,25 @@ export const markCustomerSynced = async (clientId: string) => {
 
 export const normalizeTransactionRecord = (tx: Transaction) => {
   const legacyAmount = Number(tx.amount) || 0;
-  const credit = Number(tx.credit) || (tx.type === 'Payment' ? legacyAmount : 0);
-  const debit = Number(tx.debit) || (tx.type === 'Credit' ? legacyAmount : 0);
+  const credit =
+    Number(tx.credit) || (tx.type === "Payment" ? legacyAmount : 0);
+  const debit = Number(tx.debit) || (tx.type === "Credit" ? legacyAmount : 0);
 
   return {
     date: tx.date,
-    description: tx.description || tx.note || '',
+    description: tx.description || tx.note || "",
     credit,
     debit,
     amount: legacyAmount,
     type: tx.type,
-    note: tx.note || '',
+    note: tx.note || "",
   };
 };
 
-export const syncPendingCustomers = async (apiBaseUrl: string, token: string) => {
+export const syncPendingCustomers = async (
+  apiBaseUrl: string,
+  token: string,
+) => {
   const queue = await getPendingSyncCustomers();
   const synced: string[] = [];
 
@@ -167,13 +179,18 @@ export const syncPendingCustomers = async (apiBaseUrl: string, token: string) =>
   }
 
   for (const customer of queue) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     try {
-      const url = `${apiBaseUrl.replace(/\/$/, '')}/api/customers`;
-      const normalizedTransactions = customer.transactions.map(normalizeTransactionRecord);
+      const url = `${apiBaseUrl.replace(/\/$/, "")}/api/customers`;
+      const normalizedTransactions = customer.transactions.map(
+        normalizeTransactionRecord,
+      );
       const response = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -182,11 +199,13 @@ export const syncPendingCustomers = async (apiBaseUrl: string, token: string) =>
           phoneNumber: customer.phoneNumber,
           transactions: normalizedTransactions,
         }),
-        timeout: 10000, // 10 second timeout
+        signal: controller.signal,
       });
 
       if (!response.ok) {
-        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+        throw new Error(
+          `Server returned ${response.status}: ${response.statusText}`,
+        );
       }
 
       synced.push(customer.clientId);
@@ -194,6 +213,8 @@ export const syncPendingCustomers = async (apiBaseUrl: string, token: string) =>
       // Log which customer failed to sync
       console.error(`Failed to sync customer ${customer.clientId}:`, error);
       throw error; // Re-throw to be caught by caller
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
@@ -204,24 +225,34 @@ export const syncPendingCustomers = async (apiBaseUrl: string, token: string) =>
   return synced.length;
 };
 
-export const fetchCustomersFromServer = async (apiBaseUrl: string, token: string): Promise<Customer[]> => {
+export const fetchCustomersFromServer = async (
+  apiBaseUrl: string,
+  token: string,
+): Promise<Customer[]> => {
   try {
-    const url = `${apiBaseUrl.replace(/\/$/, '')}/api/customers`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    const url = `${apiBaseUrl.replace(/\/$/, "")}/api/customers`;
     const response = await fetch(url, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      timeout: 10000, // 10 second timeout
+      signal: controller.signal,
     });
 
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
-      throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+      throw new Error(
+        `Server returned ${response.status}: ${response.statusText}`,
+      );
     }
 
     const customers = await response.json();
-    
+
     // Add pendingSync: false to server customers
     const customersWithSyncStatus = customers.map((customer: any) => ({
       ...customer,
@@ -235,12 +266,15 @@ export const fetchCustomersFromServer = async (apiBaseUrl: string, token: string
     await replaceLocalCustomers(customersWithSyncStatus);
     return customersWithSyncStatus;
   } catch (error) {
-    console.error('Failed to fetch customers from server:', error);
+    console.error("Failed to fetch customers from server:", error);
     throw error;
   }
 };
 
-export const syncLocalCustomersWithServer = async (apiBaseUrl: string, token: string) => {
+export const syncLocalCustomersWithServer = async (
+  apiBaseUrl: string,
+  token: string,
+) => {
   const syncedCount = await syncPendingCustomers(apiBaseUrl, token);
   await fetchCustomersFromServer(apiBaseUrl, token);
   return syncedCount;

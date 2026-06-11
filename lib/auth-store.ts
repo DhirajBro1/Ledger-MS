@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export interface AuthUser {
   id: string;
@@ -12,8 +12,24 @@ export interface AuthState {
   isLoading: boolean;
 }
 
-const AUTH_TOKEN_KEY = 'auth.token.v1';
-const AUTH_USER_KEY = 'auth.user.v1';
+const AUTH_TOKEN_KEY = "auth.token.v1";
+const AUTH_USER_KEY = "auth.user.v1";
+
+const readResponseError = async (response: Response) => {
+  const contentType = response.headers.get("content-type") || "";
+
+  try {
+    if (contentType.includes("application/json")) {
+      const json = await response.json();
+      return json?.message || JSON.stringify(json);
+    }
+
+    const text = await response.text();
+    return text || `Request failed with status ${response.status}`;
+  } catch {
+    return `Request failed with status ${response.status}`;
+  }
+};
 
 export const authStore = {
   // Save token and user to AsyncStorage
@@ -24,7 +40,7 @@ export const authStore = {
         AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(user)),
       ]);
     } catch (error) {
-      console.error('Error saving auth:', error);
+      console.error("Error saving auth:", error);
       throw error;
     }
   },
@@ -44,7 +60,7 @@ export const authStore = {
 
       return { token, user };
     } catch (error) {
-      console.error('Error retrieving auth:', error);
+      console.error("Error retrieving auth:", error);
       return { token: null, user: null };
     }
   },
@@ -57,7 +73,7 @@ export const authStore = {
         AsyncStorage.removeItem(AUTH_USER_KEY),
       ]);
     } catch (error) {
-      console.error('Error clearing auth:', error);
+      console.error("Error clearing auth:", error);
       throw error;
     }
   },
@@ -68,25 +84,25 @@ export const authStore = {
     name: string,
     email: string,
     password: string,
-    confirmPassword: string
+    confirmPassword: string,
   ): Promise<{ token: string; user: AuthUser }> {
     try {
       const response = await fetch(`${apiBaseUrl}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password, confirmPassword }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Registration failed');
+        const errorMessage = await readResponseError(response);
+        throw new Error(errorMessage || "Registration failed");
       }
 
       const data = await response.json();
       await this.saveAuth(data.token, data.user);
       return data;
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error("Registration error:", error);
       throw error;
     }
   },
@@ -95,25 +111,25 @@ export const authStore = {
   async login(
     apiBaseUrl: string,
     email: string,
-    password: string
+    password: string,
   ): Promise<{ token: string; user: AuthUser }> {
     try {
       const response = await fetch(`${apiBaseUrl}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Login failed');
+        const errorMessage = await readResponseError(response);
+        throw new Error(errorMessage || "Login failed");
       }
 
       const data = await response.json();
       await this.saveAuth(data.token, data.user);
       return data;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error("Login error:", error);
       throw error;
     }
   },
@@ -123,7 +139,7 @@ export const authStore = {
     try {
       await this.clearAuth();
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
       throw error;
     }
   },

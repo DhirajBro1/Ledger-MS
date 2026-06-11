@@ -384,5 +384,9 @@ async function startServer() {
 if (process.env.VERCEL) {
   module.exports = app;
 } else {
-  startServer();
+  if (require.main === module) {
+    startServer();
+  }
 }
+
+module.exports = app;
