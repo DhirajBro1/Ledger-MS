@@ -70,3 +70,26 @@ Notes:
 
 - Render free web services can sleep when idle, so the first request after inactivity may be slower.
 - If the app still points to `localhost` or a private LAN IP, auth and cloud sync will fail after deployment.
+
+## Deploying the backend on Vercel
+
+This is the no-card option. Vercel can host the backend as serverless functions, which fits your auth and customer sync endpoints.
+
+1. In Vercel, import the GitHub repo.
+2. Set the project root directory to `backend`.
+3. Leave the framework preset as Other.
+4. Add these environment variables in Vercel:
+   - `MONGODB_URI`
+   - `JWT_SECRET`
+5. Deploy the project.
+6. Your API base URL will be the Vercel deployment URL, and the endpoints will stay under `/api`, for example:
+   - `/api/auth/login`
+   - `/api/auth/register`
+   - `/api/customers`
+7. Set `EXPO_PUBLIC_API_URL` in the Expo app to the Vercel URL before building the app.
+
+Important:
+
+- Do not use `localhost` or a private IP in production.
+- Keep MongoDB Atlas as the database, since Vercel only hosts the API layer.
+- If you change `MONGODB_URI`, rotate the Atlas password because the old value was exposed in chat.

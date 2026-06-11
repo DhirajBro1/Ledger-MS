@@ -10,7 +10,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+const JWT_SECRET =
+  process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
 // User Schema for authentication
 const userSchema = new mongoose.Schema(
@@ -34,12 +35,12 @@ const userSchema = new mongoose.Schema(
       minlength: 6,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // Hash password before saving
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
@@ -58,8 +59,8 @@ const User = mongoose.model("User", userSchema);
 
 // Auth middleware to verify JWT
 const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
     return res.status(401).json({ message: "No token provided" });
@@ -106,13 +107,15 @@ const transactionSchema = new mongoose.Schema(
       default: "",
     },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const calculateTotalDue = (transactions = []) => {
   return transactions.reduce((balance, tx) => {
-    const credit = Number(tx.credit) || (tx.type === 'Payment' ? Number(tx.amount) || 0 : 0);
-    const debit = Number(tx.debit) || (tx.type === 'Credit' ? Number(tx.amount) || 0 : 0);
+    const credit =
+      Number(tx.credit) || (tx.type === "Payment" ? Number(tx.amount) || 0 : 0);
+    const debit =
+      Number(tx.debit) || (tx.type === "Credit" ? Number(tx.amount) || 0 : 0);
     return balance + debit - credit;
   }, 0);
 };
@@ -138,7 +141,7 @@ const customerSchema = new mongoose.Schema(
     phoneNumber: {
       type: String,
       required: false,
-      default: '',
+      default: "",
       trim: true,
     },
     totalDue: {
@@ -150,19 +153,60 @@ const customerSchema = new mongoose.Schema(
       default: [],
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // Compound unique index for user-specific clientId
 customerSchema.index({ userId: 1, clientId: 1 }, { unique: true });
 
 // Pre-save hook to auto-calculate totalDue from transactions
-customerSchema.pre('save', function (next) {
+customerSchema.pre("save", function (next) {
   this.totalDue = calculateTotalDue(this.transactions || []);
   next();
 });
 
 const Customer = mongoose.model("Customer", customerSchema);
+
+const globalForMongoose = globalThis;
+let cachedConnection = globalForMongoose._mongooseConnection;
+
+if (!cachedConnection) {
+  cachedConnection = globalForMongoose._mongooseConnection = {
+    conn: null,
+    promise: null,
+  };
+}
+
+async function connectToDatabase() {
+  if (!process.env.MONGODB_URI) {
+    throw new Error("MONGODB_URI is not set");
+  }
+
+  if (cachedConnection.conn) {
+    return cachedConnection.conn;
+  }
+
+  if (!cachedConnection.promise) {
+    cachedConnection.promise = mongoose.connect(process.env.MONGODB_URI);
+  }
+
+  cachedConnection.conn = await cachedConnection.promise;
+  return cachedConnection.conn;
+}
+
+const ensureDatabaseConnection = async (_req, res, next) => {
+  try {
+    await connectToDatabase();
+    next();
+  } catch (error) {
+    return res.status(500).json({
+      message: "Database connection failed",
+      error: error.message,
+    });
+  }
+};
+
+app.use("/api", ensureDatabaseConnection);
 
 // Auth Endpoints
 app.post("/api/auth/register", async (req, res) => {
@@ -170,7 +214,9 @@ app.post("/api/auth/register", async (req, res) => {
     const { name, email, password, confirmPassword } = req.body;
 
     if (!name || !email || !password || !confirmPassword) {
-      return res.status(400).json({ message: "Name, email, and password are required" });
+      return res
+        .status(400)
+        .json({ message: "Name, email, and password are required" });
     }
 
     if (password !== confirmPassword) {
@@ -178,7 +224,9 @@ app.post("/api/auth/register", async (req, res) => {
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ message: "Password must be at least 6 characters" });
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters" });
     }
 
     const existingUser = await User.findOne({ email });
@@ -189,7 +237,9 @@ app.post("/api/auth/register", async (req, res) => {
     const user = new User({ name, email, password });
     await user.save();
 
-    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: "30d" });
+    const token = jwt.sign({ userId: user._id }, JWT_SECRET, {
+      expiresIn: "30d",
+    });
 
     return res.status(201).json({
       token,
@@ -208,7 +258,9 @@ app.post("/api/auth/login", async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
+      return res
+        .status(400)
+        .json({ message: "Email and password are required" });
     }
 
     const user = await User.findOne({ email });
@@ -221,7 +273,9 @@ app.post("/api/auth/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: "30d" });
+    const token = jwt.sign({ userId: user._id }, JWT_SECRET, {
+      expiresIn: "30d",
+    });
 
     return res.json({
       token,
@@ -239,9 +293,13 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
 
+app.get("/api/health", (_req, res) => {
+  res.json({ ok: true });
+});
+
 app.post("/api/customers", authenticateToken, async (req, res) => {
   try {
-    const { clientId, name, phoneNumber = '', transactions = [] } = req.body;
+    const { clientId, name, phoneNumber = "", transactions = [] } = req.body;
     const userId = req.userId;
 
     if (!clientId || !name) {
@@ -252,12 +310,12 @@ app.post("/api/customers", authenticateToken, async (req, res) => {
 
     const normalizedTransactions = transactions.map((tx) => ({
       date: tx.date || new Date().toISOString(),
-      description: tx.description || tx.note || '',
+      description: tx.description || tx.note || "",
       credit: Number(tx.credit) || 0,
       debit: Number(tx.debit) || 0,
       amount: Number(tx.amount) || 0,
       type: tx.type,
-      note: tx.note || '',
+      note: tx.note || "",
     }));
 
     const totalDue = calculateTotalDue(normalizedTransactions);
@@ -268,7 +326,7 @@ app.post("/api/customers", authenticateToken, async (req, res) => {
         userId,
         clientId,
         name,
-        phoneNumber: phoneNumber || '',
+        phoneNumber: phoneNumber || "",
         transactions: normalizedTransactions,
         totalDue,
       },
@@ -277,7 +335,7 @@ app.post("/api/customers", authenticateToken, async (req, res) => {
         upsert: true,
         runValidators: true,
         setDefaultsOnInsert: true,
-      }
+      },
     );
 
     return res.status(201).json(customer);
@@ -306,11 +364,7 @@ const PORT = process.env.PORT || 5000;
 
 async function startServer() {
   try {
-    if (!process.env.MONGODB_URI) {
-      throw new Error("MONGODB_URI is not set");
-    }
-
-    await mongoose.connect(process.env.MONGODB_URI);
+    await connectToDatabase();
     console.log("Connected to MongoDB");
 
     app.listen(PORT, () => {
@@ -322,4 +376,8 @@ async function startServer() {
   }
 }
 
-startServer();
+if (process.env.VERCEL) {
+  module.exports = app;
+} else {
+  startServer();
+}
