@@ -206,9 +206,22 @@ const ensureDatabaseConnection = async (_req, res, next) => {
   }
 };
 
-app.use("/api", ensureDatabaseConnection);
-
 // Auth Endpoints
+app.get("/", (_req, res) => {
+  res.json({ ok: true, message: "Ledger-MS backend is running" });
+});
+
+app.get("/health", (_req, res) => {
+  res.json({ ok: true });
+});
+
+app.get("/api/health", (_req, res) => {
+  res.json({ ok: true });
+});
+
+app.use("/api/auth", ensureDatabaseConnection);
+app.use("/api/customers", ensureDatabaseConnection);
+
 app.post("/api/auth/register", async (req, res) => {
   try {
     const { name, email, password, confirmPassword } = req.body;
@@ -287,14 +300,6 @@ app.post("/api/auth/login", async (req, res) => {
       error: error.message,
     });
   }
-});
-
-app.get("/health", (_req, res) => {
-  res.json({ ok: true });
-});
-
-app.get("/api/health", (_req, res) => {
-  res.json({ ok: true });
 });
 
 app.post("/api/customers", authenticateToken, async (req, res) => {
