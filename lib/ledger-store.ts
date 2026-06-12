@@ -121,6 +121,19 @@ export const replaceLocalCustomers = async (customers: Customer[]) => {
   await writeJson(CUSTOMERS_KEY, customers);
 };
 
+export const deleteLocalCustomer = async (clientId: string) => {
+  const customers = await getLocalCustomers();
+  const nextCustomers = customers.filter(
+    (customer) => customer.clientId !== clientId,
+  );
+
+  await writeJson(CUSTOMERS_KEY, nextCustomers);
+
+  const queue = await getPendingSyncCustomers();
+  const nextQueue = queue.filter((customer) => customer.clientId !== clientId);
+  await writeJson(SYNC_QUEUE_KEY, nextQueue);
+};
+
 export const queueCustomerForSync = async (customer: Customer) => {
   const queue = await readJson<Customer[]>(SYNC_QUEUE_KEY, []);
   const nextQueue = queue.filter((item) => item.clientId !== customer.clientId);

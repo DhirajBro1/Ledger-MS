@@ -365,6 +365,32 @@ app.get("/api/customers", authenticateToken, async (req, res) => {
   }
 });
 
+app.delete("/api/customers/:clientId", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { clientId } = req.params;
+
+    const deletedCustomer = await Customer.findOneAndDelete({
+      userId,
+      clientId,
+    });
+
+    if (!deletedCustomer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    return res.json({
+      message: "Customer deleted successfully",
+      clientId,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Failed to delete customer",
+      error: error.message,
+    });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 
 async function startServer() {
