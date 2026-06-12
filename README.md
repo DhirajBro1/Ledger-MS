@@ -42,14 +42,13 @@ Ledger-MS is an offline-first customer ledger app built with Expo (React Native)
 ### 1) Install frontend dependencies
 
 ```bash
-cd /home/runner/work/Ledger-MS/Ledger-MS/DhirajBro1/Ledger-MS
 npm install
 ```
 
 ### 2) Install backend dependencies
 
 ```bash
-cd /home/runner/work/Ledger-MS/Ledger-MS/DhirajBro1/Ledger-MS/backend
+cd backend
 npm install
 ```
 
@@ -64,7 +63,7 @@ Set these env vars before starting backend:
 ### 4) Run backend
 
 ```bash
-cd /home/runner/work/Ledger-MS/Ledger-MS/DhirajBro1/Ledger-MS/backend
+cd backend
 npm start
 ```
 
@@ -79,14 +78,12 @@ Set `EXPO_PUBLIC_API_URL` to your backend URL when running Expo.
 Example:
 
 ```bash
-cd /home/runner/work/Ledger-MS/Ledger-MS/DhirajBro1/Ledger-MS
 EXPO_PUBLIC_API_URL=http://localhost:5000 npx expo start
 ```
 
 ### 6) Run frontend
 
 ```bash
-cd /home/runner/work/Ledger-MS/Ledger-MS/DhirajBro1/Ledger-MS
 npm run start
 ```
 
