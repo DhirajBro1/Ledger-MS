@@ -1,72 +1,130 @@
-# Welcome to your Expo app 👋
+# Ledger-MS
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Ledger-MS is an offline-first customer ledger app built with Expo (React Native) and an Express + MongoDB backend.
 
-## Get started
+## What this repository contains
 
-1. Install dependencies
+- **Mobile app** (`/`) using Expo Router and React Native
+- **Backend API** (`/backend`) using Express, Mongoose, JWT auth
 
-   ```bash
-   npm install
-   ```
+## Features
 
-2. Start the app
+- User registration and login
+- Customer management
+- Per-customer ledger entries (credit/debit)
+- Running due balance calculation
+- Local-first storage with AsyncStorage
+- Background sync to cloud backend when authenticated
+- Light/Dark/System theme support
 
-   ```bash
-   npx expo start
-   ```
+## Tech stack
 
-In the output, you'll find options to open the app in a
+### Frontend
+- Expo + React Native
+- Expo Router
+- TypeScript
+- AsyncStorage
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### Backend
+- Node.js + Express
+- MongoDB + Mongoose
+- JWT authentication
+- bcrypt password hashing
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Prerequisites
 
-## Get a fresh project
+- Node.js 18+
+- npm
+- MongoDB Atlas (or compatible MongoDB instance)
 
-When you're ready, run:
+## Setup
+
+### 1) Install frontend dependencies
 
 ```bash
-npm run reset-project
+cd /home/runner/work/Ledger-MS/Ledger-MS/DhirajBro1/Ledger-MS
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2) Install backend dependencies
 
-## Learn more
+```bash
+cd /home/runner/work/Ledger-MS/Ledger-MS/DhirajBro1/Ledger-MS/backend
+npm install
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+### 3) Configure backend environment
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Set these env vars before starting backend:
 
-## Join the community
+- `MONGODB_URI` (MongoDB connection string)
+- `JWT_SECRET` (long random secret)
+- `PORT` (optional, defaults to `5000`)
 
-Join our community of developers creating universal apps.
+### 4) Run backend
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+cd /home/runner/work/Ledger-MS/Ledger-MS/DhirajBro1/Ledger-MS/backend
+npm start
+```
 
-## Deploying the backend on Render
+Backend health endpoints:
+- `GET /health`
+- `GET /api/health`
 
-This project can use Render for the backend API. The backend already reads `PORT` and connects to MongoDB through `MONGODB_URI`, so it can run as a Render web service.
+### 5) Configure frontend API URL
 
-1. Push this repo to GitHub.
-2. In Render, create a new Blueprint and connect the repo, or create a new Web Service from the `backend` folder.
-3. Use these settings if you configure it manually:
-   - Root directory: `backend`
-   - Build command: `npm install`
-   - Start command: `npm start`
-   - Environment: `Node`
-4. Add these environment variables in Render:
-   - `MONGODB_URI` with your MongoDB Atlas connection string
-   - `JWT_SECRET` with a long random secret
-5. Deploy the service and copy the public Render URL, for example `https://ledger-ms-backend.onrender.com`.
-6. Set `EXPO_PUBLIC_API_URL` in your Expo app to that Render URL before building the app for production.
+Set `EXPO_PUBLIC_API_URL` to your backend URL when running Expo.
 
-Notes:
+Example:
 
-- Render free web services can sleep when idle, so the first request after inactivity may be slower.
-- If the app still points to `localhost` or a private LAN IP, auth and cloud sync will fail after deployment.
+```bash
+cd /home/runner/work/Ledger-MS/Ledger-MS/DhirajBro1/Ledger-MS
+EXPO_PUBLIC_API_URL=http://localhost:5000 npx expo start
+```
+
+### 6) Run frontend
+
+```bash
+cd /home/runner/work/Ledger-MS/Ledger-MS/DhirajBro1/Ledger-MS
+npm run start
+```
+
+Other app scripts:
+
+```bash
+npm run android
+npm run ios
+npm run web
+npm run lint
+```
+
+## Backend API summary
+
+### Auth
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+
+### Customers (requires Authorization bearer token)
+- `POST /api/customers` (create/update by `clientId`)
+- `GET /api/customers`
+- `DELETE /api/customers/:clientId`
+
+## Deploying backend on Render
+
+This repository includes `/render.yaml` for Render Blueprint deploy.
+
+Render service config in this repo:
+- Root directory: `backend`
+- Build command: `npm install`
+- Start command: `npm start`
+- Required environment variables:
+  - `MONGODB_URI`
+  - `JWT_SECRET`
+
+After deployment, set app `EXPO_PUBLIC_API_URL` to the Render backend URL.
+
+## Notes
+
+- The app stores customer data locally first, then syncs with backend when authenticated.
+- If `EXPO_PUBLIC_API_URL` is not set, some screens use local fallback URLs intended for development only.
