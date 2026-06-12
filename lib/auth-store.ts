@@ -15,6 +15,9 @@ export interface AuthState {
 const AUTH_TOKEN_KEY = "auth.token.v1";
 const AUTH_USER_KEY = "auth.user.v1";
 
+const normalizeApiBaseUrl = (apiBaseUrl: string) =>
+  apiBaseUrl.replace(/\/$/, "");
+
 const readResponseError = async (response: Response) => {
   const contentType = response.headers.get("content-type") || "";
 
@@ -87,11 +90,14 @@ export const authStore = {
     confirmPassword: string,
   ): Promise<{ token: string; user: AuthUser }> {
     try {
-      const response = await fetch(`${apiBaseUrl}/api/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, confirmPassword }),
-      });
+      const response = await fetch(
+        `${normalizeApiBaseUrl(apiBaseUrl)}/api/auth/register`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, password, confirmPassword }),
+        },
+      );
 
       if (!response.ok) {
         const errorMessage = await readResponseError(response);
@@ -114,11 +120,14 @@ export const authStore = {
     password: string,
   ): Promise<{ token: string; user: AuthUser }> {
     try {
-      const response = await fetch(`${apiBaseUrl}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await fetch(
+        `${normalizeApiBaseUrl(apiBaseUrl)}/api/auth/login`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        },
+      );
 
       if (!response.ok) {
         const errorMessage = await readResponseError(response);

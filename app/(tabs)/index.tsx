@@ -163,7 +163,7 @@ export default function HomeScreen() {
                 {isFetching ? (
                   <ActivityIndicator size="small" color={palette.accent} />
                 ) : (
-                  <Text style={[styles.refreshText, { color: palette.text }]}>Fetch Cloud</Text>
+                  <Text style={[styles.refreshText, { color: palette.text }]}>Refresh</Text>
                 )}
               </Pressable>
             </View>
